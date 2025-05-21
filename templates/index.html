@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #4a6fa5;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+            clear: both;
+        }
+        .user-message {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 15px 15px 0 15px;
+            float: right;
+            margin-left: 20%;
+        }
+        .bot-message {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 15px 15px 15px 0;
+            float: left;
+            margin-right: 20%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .input-area {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        textarea {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: none;
+            height: 60px;
+            font-family: inherit;
+        }
+        button {
+            padding: 0 20px;
+            background: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #3a5a80;
+        }
+        .prompt-area {
+            padding: 10px 15px;
+            background: #f0f4f8;
+            border-bottom: 1px solid #e0e6ed;
+        }
+        .prompt-input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .typing {
+            display: block;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 15px 15px 15px 0;
+            float: left;
+            color: #666;
+            font-style: italic;
+            clear: both;
+            margin-bottom: 15px;
+        }
+        @media (max-width: 600px) {
+            .message {
+                max-width: 90%;
+            }
+            .user-message {
+                margin-left: 10%;
+            }
+            .bot-message {
+                margin-right: 10%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-header">
+            <h2>Custom Chatbot</h2>
+        </div>
+        <div class="prompt-area">
+            <label for="system-prompt">System Prompt (define your chatbot's behavior):</label>
+            <input type="text" id="system-prompt" class="prompt-input" 
+                   value="You are a helpful assistant.">
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be added here dynamically -->
+        </div>
+        <div class="input-area">
+            <textarea id="user-input" placeholder="Type your message here..." rows="1"></textarea>
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const systemPrompt = document.getElementById('system-prompt');
+        
+        // Generate a unique chat ID
+        const chatId = 'chat-' + Math.random().toString(36).substr(2, 9);
+        
+        // Auto-resize textarea
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+        
+        // Send message on button click
+        sendButton.addEventListener('click', sendMessage);
+        
+        // Send message on Enter (but allow Shift+Enter for new line)
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(role + '-message');
+            messageDiv.textContent = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageDiv;
+        }
+        
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('typing');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.textContent = 'Typing...';
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return typingDiv;
+        }
+        
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+        
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            // Add user message to chat
+            addMessage('user', message);
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            
+            // Show typing indicator
+            const typingIndicator = showTypingIndicator();
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        prompt: systemPrompt.value,
+                        chat_id: chatId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                
+                // Remove typing indicator
+                hideTypingIndicator();
+                
+                // Add bot response to chat
+                if (data.response) {
+                    addMessage('bot', data.response);
+                } else if (data.error) {
+                    addMessage('bot', 'Error: ' + data.error);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                hideTypingIndicator();
+                addMessage('bot', 'Sorry, there was an error processing your request.');
+            }
+        }
+        
+        // Initial welcome message
+        window.addEventListener('load', () => {
+            addMessage('bot', 'Hello! I\'m your custom chatbot. You can change my behavior by modifying the system prompt above.');
+        });
+    </script>
+</body>
+</html>
