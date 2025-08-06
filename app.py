@@ -10,7 +10,7 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {    
-        "origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
+        "origins": ["http://localhost:5001", "http://127.0.0.1:5001"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
     }
@@ -67,4 +67,4 @@ def chat():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)
